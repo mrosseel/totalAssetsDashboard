@@ -1,5 +1,6 @@
-import myAssets
+import myAssets as myAssets
 import requests
+from requests import ConnectionError
 import numpy as np
 
 def getStocks():
@@ -40,6 +41,6 @@ def getPM():
     return myAssets.gold_ounces*goldpriceeur + myAssets.silver_ounces*silverpriceeur
 
 try:
-    print(getStocks()+getCrypto()+getPM())
+    print(getStocks()+getCrypto()+getPM()+cash)
 except ConnectionError as e:
     print "could not connect to internet"
