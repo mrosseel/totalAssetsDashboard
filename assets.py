@@ -4,15 +4,16 @@ from requests import ConnectionError
 import numpy as np
 import argparse
 import time
+import locale
 
 def getStocks(verbose=False):
     r = requests.get('http://download.finance.yahoo.com/d/quotes.csv?s={0}&f=l1'.format(','.join(myAssets.stocks)))
     text = r.text.split('\n')
-    print text
+    #print text
     result = map(lambda x: float(str(x)), text[:-1])
     holdings = np.multiply(result,myAssets.stocks_amounts)
     total = sum(holdings)
-    if verbose: print("stocks",total)
+    printResult("stocks", total)
     return total
 
 def getCrypto(verbose=False):
@@ -24,7 +25,7 @@ def getCrypto(verbose=False):
     for currency, amount in zip(myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts):
         lastcur = float(str(crypto.json()['BTC_{0}'.format(currency)]['last']))
         total += lastcur*amount*btceur
-    if verbose: print("crypto",total)
+    printResult("crypto", total)
     return total
 
 def getPM(verbose=False):
@@ -50,22 +51,26 @@ def getPM(verbose=False):
         silverpriceeur = 16
 
     total = myAssets.gold_ounces*goldpriceeur + myAssets.silver_ounces*silverpriceeur
-    if verbose: print("pm",total)
+    printResult("pm", total)
     return total
 
 def getOther(verbose=False):
     # cash euro
     total =  myAssets.cash_euro
-    if verbose: print("cash_euro",total)
+    printResult("Cash", total)
     return total
 
+def printResult(name, value):
+    if verbose: print('{}:\t\t{:>7} EUR'.format(name, locale.format('%.0f', value, True, True)))
+
 try:
+    locale.setlocale(locale.LC_ALL, 'de_DE')
     parser = argparse.ArgumentParser(description='Asset arguments.')
     parser.add_argument('--silent', dest='silent', action='store_true')
     parser.set_defaults(silent=False)
     args = parser.parse_args()
     verbose = not args.silent
-    if verbose: print(time.strftime("%x %H:%M:%S"))
-    print(getStocks(verbose)+getCrypto(verbose)+getPM(verbose)+getOther(verbose))
+    if verbose: print('Datetime:\t{}\n'.format(time.strftime("%x @ %H:%M:%S")))
+    printResult('Total', getStocks(verbose)+getCrypto(verbose)+getPM(verbose)+getOther(verbose))
 except ConnectionError as e:
     print "could not connect to internet"
