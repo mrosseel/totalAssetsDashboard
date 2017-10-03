@@ -1,6 +1,4 @@
-import assetsMike as myAssets
-import requests
-from requests import ConnectionError
+import urequests
 import argparse
 import time
 import locale
@@ -108,8 +106,11 @@ def run():
         parser = argparse.ArgumentParser(description='Asset arguments.')
         parser.add_argument('--silent', dest='silent', action='store_true')
         parser.set_defaults(silent=False)
+        parser.add_argument('--myAssets', dest='myAssets', nargs = 1, action='store', required=True)
+        parser.set_defaults(silent=False)
         args = parser.parse_args()
         verbose = not args.silent
+        myAssets = args.myAssets
         printAll(verbose)
     except ConnectionError as e:
         print("could not connect to internet")
