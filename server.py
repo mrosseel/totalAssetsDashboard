@@ -2,11 +2,16 @@
 import assetsLibRaw as assets
 import json
 import time
+import datetime
+from datetime import timedelta
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
+  last_pm_datetime = datetime.datetime.now()
+  gold_silver = assets.getPMRaw()
+  delta_1hour = timedelta(hours=1)
 
   # GET
   def do_GET(self):
@@ -19,7 +24,10 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         current_time = '{}'.format(time.strftime("%H:%M:%S"))
         # Send message back to client
         message = assets.getCryptoRaw()
-        gold_silver = assets.getPMRaw()
+        # only update PM every hour
+        if datetime.datetime.now() - last_pm_datetime > delta_1hour:
+            last_pm_datetime = datetime.datetime.now()
+            gold_silver = assets.getPMRaw()
         message['TIME'] = current_time
         message['goldeur'] = gold_silver['goldeur']
         message['silvereur'] = gold_silver['silvereur']
@@ -32,7 +40,7 @@ def run():
 
   # Server settings
   # Choose port 8080, for port 80, which is normally used for a http server, you need root access
-  server_address = ('192.168.0.135', 8081)
+  server_address = ('0.0.0.0', 8081)
   httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
   print('running server...')
   httpd.serve_forever()

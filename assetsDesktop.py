@@ -1,4 +1,5 @@
 import assetsLibAmounts as lib
+import assetsLibRaw as raw
 import argparse
 import time
 import locale
@@ -24,9 +25,10 @@ def printPercentage(value, total):
 def printAll(verbose=True):
     if verbose: print('Datetime:\t{}\n'.format(time.strftime("%x @ %H:%M:%S")))
     stocks = lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
-    crypto = lib.getCryptoPolo(myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
+    crypto = lib.getCryptoPolo(raw.getCryptoRaw(), myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
     other = getOther(myAssets)
-    pm = lib.getPM(myAssets.gold_ounces, myAssets.silver_ounces)
+    pm_raw = raw.getPMRaw()
+    pm = lib.getPM(pm_raw['goldeur'], pm_raw['silvereur'], myAssets.gold_ounces, myAssets.silver_ounces)
     total = stocks+crypto+pm+other
     printFullResult("stocks", stocks, total)
     printFullResult("crypto", crypto, total)
