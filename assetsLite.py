@@ -39,7 +39,7 @@ def printPercentage(value, total):
     print('\t\t({:>4} %)'.format('{:.1f}'.format(value/total*100)))
 
 def printAll(verbose=True):
-    current_prices_crypto = urequests.get('http://192.168.0.135:8081').json()
+    current_prices_crypto = urequests.get('http://total-assets.appspot.com').json()
     stocks = lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
     crypto = lib.getCryptoPolo(current_prices_crypto, myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
     other = getOther(myAssets)

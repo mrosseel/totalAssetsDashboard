@@ -1,11 +1,11 @@
 import assetsLibAmounts as lib
-import assetsLibRaw as raw
+import server.assetsLibRaw as raw
 import argparse
 import time
 import locale
 import json
 
-import myAssets
+import assetsMike as myAssets
 
 def getOther(myAssets):
     # cash euro

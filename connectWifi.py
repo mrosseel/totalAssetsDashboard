@@ -1,3 +1,5 @@
+# improve using http://docs.micropython.org/en/v1.9.1/wipy/wipy/tutorial/wlan.html
+
 def connect(ssid, password):
     import network
 

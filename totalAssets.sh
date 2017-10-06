@@ -1,1 +1,1 @@
-python3 assets.py >> progress.txt && tail -n 7 progress.txt
+python3 assetsDesktop.py >> progress.txt && tail -n 7 progress.txt

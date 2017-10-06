@@ -1,4 +1,4 @@
-import assetsLibRaw as lib
+import server.assetsLibRaw as lib
 
 def getStocks(myStocks, myStocksAmount):
     total = 0
