@@ -56,7 +56,10 @@ def printAll(verbose=True):
     oledLine(prettyResultSmall('PM', pm), 2)
     oledLine(prettyResultSmall('Other', other), 3)
     oledLine(prettyResultSmall('Total', total, ' EUR'), 4)
-    oledLine(current_prices_crypto['TIME'][:-3], 5)
+    timestring = current_prices_crypto['TIME'][:-3]
+    hour = int(timestring[:2])
+    correctedhour = hour + myAssets.timezone
+    oledLine(str(correctedhour)+timestring[2:], 5)
     oled.show()
     #print()
 
