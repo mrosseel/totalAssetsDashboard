@@ -6,7 +6,7 @@ import machine, ssd1306
 import urequests
 import time
 
-import myAssets
+import mikeAssets as myAssets
 
 def getOther(myAssets):
     # cash euro
@@ -51,33 +51,42 @@ def printAll(verbose=True):
     #printFullResult("other", other, total)
     #printResult('Total', total)
     oled.fill(0)
-    showOled(prettyResultSmall('Stocks', stocks), 0)
-    showOled(prettyResultSmall('Crypto', crypto), 1)
-    showOled(prettyResultSmall('PM', pm), 2)
-    showOled(prettyResultSmall('Other', other), 3)
-    showOled(prettyResultSmall('Total', total, ' EUR'), 4)
-    showOled(current_prices_crypto['TIME'][:-3], 5)
+    oledLine(prettyResultSmall('Stocks', stocks), 0)
+    oledLine(prettyResultSmall('Crypto', crypto), 1)
+    oledLine(prettyResultSmall('PM', pm), 2)
+    oledLine(prettyResultSmall('Other', other), 3)
+    oledLine(prettyResultSmall('Total', total, ' EUR'), 4)
+    oledLine(current_prices_crypto['TIME'][:-3], 5)
     oled.show()
     #print()
 
-def showOled(text, line):
+def oledLine(text, line):
     oled.text(text, 0, line*10)
 
+def oledLineFull(text, line):
+    oled.fill(0)
+    oled.text(text, 0, line*10)
+    oled.show()
+
 def initWifiAndOled():
-    connectWifi.connect(myAssets.ssid, myAssets.password)
     i2c = machine.I2C(scl=machine.Pin(4), sda=machine.Pin(5))
     global oled
     oled = ssd1306.SSD1306_I2C(128, 64, i2c)
+    oledLineFull('Connect wifi...', 3)
+    connectWifi.connect(myAssets.ssid, myAssets.password)
 
 def run():
     initWifiAndOled()
-    oled.fill(0)
-    oled.text('Loading prices ...', 0, 30)
-    oled.show()
+    oledLineFull('Load prices...', 3)
     verbose = False
     while True:
-        printAll(verbose)
-        time.sleep(60*10)
+        try:
+            printAll(verbose)
+            time.sleep(60*10)
+        except Exception as e:
+            print('Exception occured:',type(e), e.args, e)
+            oledLineFull('Error, 10s sleep', 3)
+            time.sleep(60*10)
 
 if __name__ == '__main__':
     run()
