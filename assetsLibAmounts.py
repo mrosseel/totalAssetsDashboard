@@ -9,11 +9,15 @@ def getStocks(myStocks, myStocksAmount):
 
 def getCryptoPolo(current_prices, bitcoin, myPoloniexCrypto, myPoloniexAmounts):
     total = 0
+
     eurbtc = current_prices['EUR_BTC']
     total += bitcoin * eurbtc
+    distribution = [['BTC', total]]
     for currency, amount in zip(myPoloniexCrypto, myPoloniexAmounts):
-        total += current_prices['BTC_'+currency]*amount*eurbtc
-    return total
+        current = current_prices['BTC_'+currency]*amount*eurbtc
+        total += current
+        distribution.append([currency, current])
+    return [total, distribution]
 
 def getPM(goldeur, silvereur, gold_ounces, silver_ounces):
     return gold_ounces*goldeur + silver_ounces*silvereur

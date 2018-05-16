@@ -3,9 +3,10 @@ import time
 import json
 import connectWifi
 import machine, ssd1306
-import urequests
-import utime as time
+
+import urequestsimport utime as time
 import gc
+import common
 
 import mikeAssets as myAssets
 
@@ -24,18 +25,6 @@ def printResult(name, value):
 def prettyResult(name, value):
     return '{}:\t\t{:>7} EUR'.format(name, '{:.0f}'.format(value))
 
-def prettyResultSmall(name, value, suffix=''):
-    label = '{}:'.format(name)
-    if(value > 100000):
-        numbervalue = '{:>n}k'.format(round(value/1000.0))
-    else:
-        numbervalue = '{:>,n}'.format(round(value))
-    spaces = 16 - len(label) - len(numbervalue) - len(suffix)
-    filler = ''
-    if spaces > 0:
-        filler = ' '*spaces
-    return label + filler + numbervalue + suffix
-
 def printPercentage(value, total):
     print('\t\t({:>4} %)'.format('{:.1f}'.format(value/total*100)))
 
@@ -45,7 +34,8 @@ def printAll(verbose=True):
     print('Before Free mem', gc.mem_free())
     current_prices_crypto = urequests.get('http://total-assets.appspot.com').json()
     stocks = lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
-    crypto = lib.getCryptoPolo(current_prices_crypto, myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
+    cryptodistrib = lib.getCryptoPolo(current_prices_crypto, myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
+    crypto = cryptodistrib[0]
     other = getOther(myAssets)
     pm = lib.getPM(current_prices_crypto['goldeur'], current_prices_crypto['silvereur'], myAssets.gold_ounces, myAssets.silver_ounces)
     total = stocks+crypto+pm+other
@@ -53,11 +43,11 @@ def printAll(verbose=True):
     gc.collect()
     print('After GC Free mem', gc.mem_free())
     oled.fill(0)
-    oledLine(prettyResultSmall('Stocks', stocks), 0)
-    oledLine(prettyResultSmall('Crypto', crypto), 1)
-    oledLine(prettyResultSmall('PM', pm), 2)
-    oledLine(prettyResultSmall('Other', other), 3)
-    oledLine(prettyResultSmall('Total', total, ' EUR'), 4)
+    oledLine(common.prettyResultSmall('Stocks', stocks), 0)
+    oledLine(common.prettyResultSmall('Crypto', crypto), 1)
+    oledLine(common.prettyResultSmall('PM', pm), 2)
+    oledLine(common.prettyResultSmall('Other', other), 3)
+    oledLine(common.prettyResultSmall('Total', total, ' EUR'), 4)
     timestring = current_prices_crypto['TIME'][:-3]
     hour = int(timestring[:2])
     correctedhour = hour + myAssets.timezone
