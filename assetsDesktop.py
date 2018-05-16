@@ -1,5 +1,5 @@
 import assetsLibAmounts as lib
-import server.assetsLibRaw as raw
+import assetsLibRaw as raw
 import argparse
 import time
 import locale
