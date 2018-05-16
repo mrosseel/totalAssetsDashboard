@@ -4,11 +4,12 @@ import json
 import connectWifi
 import machine, ssd1306
 
-import urequestsimport utime as time
+import urequests
+import utime as time
 import gc
 import common
 
-import mikeAssets as myAssets
+import assetsMike as myAssets
 
 def getOther(myAssets):
     # cash euro
@@ -33,7 +34,7 @@ def printAll(verbose=True):
     gc.collect()
     print('Before Free mem', gc.mem_free())
     current_prices_crypto = urequests.get('http://total-assets.appspot.com').json()
-    stocks = lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
+    stocks = 0 #lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
     cryptodistrib = lib.getCryptoPolo(current_prices_crypto, myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
     crypto = cryptodistrib[0]
     other = getOther(myAssets)
