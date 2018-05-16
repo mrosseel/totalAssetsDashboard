@@ -1,204 +1,120 @@
-"""Open an arbitrary URL.
+import usocket
 
-Adapted for Micropython by Alex Cowan <acowan@gmail.com>
+class Response:
 
-Works in a similar way to python-requests http://docs.python-requests.org/en/latest/
+    def __init__(self, f):
+        self.raw = f
+        self.encoding = "utf-8"
+        self._cached = None
 
-https://github.com/lucien2k/wipy-urllib/blob/master/urequests.py
-"""
+    def close(self):
+        if self.raw:
+            self.raw.close()
+            self.raw = None
+        self._cached = None
 
-import socket
-try:
-    import ussl as ssl
-except:
-    import ssl
-import binascii
+    @property
+    def content(self):
+        if self._cached is None:
+            try:
+                self._cached = self.raw.read()
+            finally:
+                self.raw.close()
+                self.raw = None
+        return self._cached
 
-class URLOpener:
-    def __init__(self, url, method, params = {}, data = {}, headers = {}, cookies = {}, auth = (), timeout = 5):
-        self.status_code = 0
-        self.headers = {}
-        self.text = ""
-        self.url = url
-        [scheme, host, port, path, query_string] = urlparse(self.url)
-        if auth and isinstance(auth, tuple) and len(auth) == 2:
-            headers['Authorization'] = 'Basic %s' % (b64encode('%s:%s' % (auth[0], auth[1])))
-        if scheme == 'http':
-            addr = socket.getaddrinfo(host, int(port))[0][-1]
-            s = socket.socket()
-            s.settimeout(5)
-            s.connect(addr)
-        else:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_SEC)
-            sock.settimeout(5)
-            s = ssl.wrap_socket(sock)
-            s.connect(socket.getaddrinfo(host, port)[0][4])
-        if params:
-            enc_params = urlencode(params)
-            path = path + '?' + enc_params.strip()
-        header_string = 'Host: %s\r\n' % host
-        if headers:
-            for k, v in headers.items():
-                header_string += '%s: %s\r\n' % (k, v)
-        if cookies:
-            for k, v in cookies.items():
-                header_string += 'Cookie: %s=%s\r\n' % (k, quote_plus(v))
-        request = b'%s %s HTTP/1.0\r\n%s' % (method, path, header_string)
-        if data:
-            if isinstance(data, dict):
-                enc_data = urlencode(data)
-                if not headers.get('Content-Type'):
-                    request += 'Content-Type: application/x-www-form-urlencoded\r\n'
-                request += 'Content-Length: %s\r\n\r\n%s\r\n' % (len(enc_data), enc_data)
-            else:
-                request += 'Content-Length: %s\r\n\r\n%s\r\n' % (len(data), data)
-        request += '\r\n'
-        s.send(request)
-        while 1:
-            recv = s.recv(1024)
-            if len(recv) == 0: break
-            self.text += recv.decode()
-        s.close()
-        self._parse_result()
+    @property
+    def text(self):
+        return str(self.content, self.encoding)
 
-    def read(self):
-        return self.text
+    def json(self):
+        import ujson
+        return ujson.loads(self.content)
 
-    def _parse_result(self):
-        self.text = self.text.split('\r\n')
-        while self.text:
-            line = self.text.pop(0).strip()
-            if line == '':
-                 break
-            if line[0:4] == 'HTTP':
-                data = line.split(' ')
-                self.status_code = int(data[1])
-                continue
-            if len(line.split(':')) >= 2:
-                data = line.split(':')
-                self.headers[data[0]] = (':'.join(data[1:])).strip()
-                continue
-        self.text = '\r\n'.join(self.text)
-        return
 
-def urlparse(url):
-    scheme = url.split('://')[0].lower()
-    url = url.split('://')[1]
-    host = url.split('/')[0]
-    path = '/'
-    data = ""
-    port = 80
-    if scheme == 'https':
+def request(method, url, data=None, json=None, headers={}, stream=None):
+    try:
+        proto, dummy, host, path = url.split("/", 3)
+    except ValueError:
+        proto, dummy, host = url.split("/", 2)
+        path = ""
+    if proto == "http:":
+        port = 80
+    elif proto == "https:":
+        import ussl
         port = 443
-    if host != url:
-        path = '/'+''.join(url.split('/')[1:])
-        if path.count('?'):
-            if path.count('?') > 1:
-                raise Exception('URL malformed, too many ?')
-            [path, data] = path.split('?')
-    if host.count(':'):
-        [host, port] = host.split(':')
-    if path[0] != '/':
-        path = '/'+path
-    return [scheme, host, port, path, data]
+    else:
+        raise ValueError("Unsupported protocol: " + proto)
 
-def get(url, params={}, **kwargs):
-    return urlopen(url, "GET", params = params, **kwargs)
+    if ":" in host:
+        host, port = host.split(":", 1)
+        port = int(port)
 
-def post(url, data={}, **kwargs):
-    return urlopen(url, "POST", data = data, **kwargs)
+    ai = usocket.getaddrinfo(host, port)
+    addr = ai[0][-1]
 
-def put(url, data={}, **kwargs):
-    return urlopen(url, "PUT", data = data, **kwargs)
+    s = usocket.socket()
+    try:
+        s.connect(addr)
+        if proto == "https:":
+            s = ussl.wrap_socket(s, server_hostname=host)
+        s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))
+        if not "Host" in headers:
+            s.write(b"Host: %s\r\n" % host)
+        # Iterate over keys to avoid tuple alloc
+        for k in headers:
+            s.write(k)
+            s.write(b": ")
+            s.write(headers[k])
+            s.write(b"\r\n")
+        if json is not None:
+            assert data is None
+            import ujson
+            data = ujson.dumps(json)
+        if data:
+            s.write(b"Content-Length: %d\r\n" % len(data))
+        s.write(b"\r\n")
+        if data:
+            s.write(data)
 
-def delete(url, **kwargs):
-    return urlopen(url, "DELETE", **kwargs)
+        l = s.readline()
+        protover, status, msg = l.split(None, 2)
+        status = int(status)
+        #print(protover, status, msg)
+        while True:
+            l = s.readline()
+            if not l or l == b"\r\n":
+                break
+            #print(l)
+            if l.startswith(b"Transfer-Encoding:"):
+                if b"chunked" in l:
+                    raise ValueError("Unsupported " + l)
+            elif l.startswith(b"Location:") and not 200 <= status <= 299:
+                raise NotImplementedError("Redirects not yet supported")
+    except OSError:
+        s.close()
+        raise
 
-def head(url, **kwargs):
-    return urlopen(url, "HEAD", **kwargs)
+    resp = Response(s)
+    resp.status_code = status
+    resp.reason = msg.rstrip()
+    return resp
 
-def options(url, **kwargs):
-    return urlopen(url, "OPTIONS", **kwargs)
 
-def urlopen(url, method="GET", params = {}, data = {}, headers = {}, cookies = {}, auth = (), timeout = 5, **kwargs):
-    orig_url = url
-    attempts = 0
-    result = URLOpener(url, method, params, data, headers, cookies, auth, timeout)
-    ## Maximum of 4 redirects
-    while attempts < 4:
-        attempts += 1
-        if result.status_code in (301, 302):
-            url = result.headers.get('Location', '')
-            if not url.count('://'):
-                [scheme, host, path, data] = urlparse(orig_url)
-                url = '%s://%s%s' % (scheme, host, url)
-            if url:
-                result = URLOpener(url)
-            else:
-                raise Exception('URL returned a redirect but one was not found')
-        else:
-            return result
-    return result
+def head(url, **kw):
+    return request("HEAD", url, **kw)
 
-always_safe = ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-               'abcdefghijklmnopqrstuvwxyz'
-               '0123456789' '_.-')
+def get(url, **kw):
+    return request("GET", url, **kw)
 
-def quote(s):
-    res = []
-    replacements = {}
-    for c in s:
-        if c in always_safe:
-            res.append(c)
-            continue
-        res.append('%%%x' % ord(c))
-    return ''.join(res)
+def post(url, **kw):
+    return request("POST", url, **kw)
 
-def quote_plus(s):
-    if ' ' in s:
-        s = s.replace(' ', '+')
-    return quote(s)
+def put(url, **kw):
+    return request("PUT", url, **kw)
 
-def unquote(s):
-    """Kindly rewritten by Damien from Micropython"""
-    """No longer uses caching because of memory limitations"""
-    res = s.split('%')
-    for i in xrange(1, len(res)):
-        item = res[i]
-        try:
-            res[i] = chr(int(item[:2], 16)) + item[2:]
-        except ValueError:
-            res[i] = '%' + item
-    return "".join(res)
+def patch(url, **kw):
+    return request("PATCH", url, **kw)
 
-def unquote_plus(s):
-    """unquote('%7e/abc+def') -> '~/abc def'"""
-    s = s.replace('+', ' ')
-    return unquote(s)
-
-def urlencode(query):
-    if isinstance(query, dict):
-        query = query.items()
-    l = []
-    for k, v in query:
-        if not isinstance(v, list):
-            v = [v]
-        for value in v:
-            k = quote_plus(str(k))
-            v = quote_plus(str(value))
-            l.append(k + '=' + v)
-    return '&'.join(l)
-
-def b64encode(s, altchars=None):
-    """Reproduced from micropython base64"""
-    if not isinstance(s, (bytes, bytearray)):
-        raise TypeError("expected bytes, not %s" % s.__class__.__name__)
-    # Strip off the trailing newline
-    encoded = binascii.b2a_base64(s)[:-1]
-    if altchars is not None:
-        if not isinstance(altchars, bytes_types):
-            raise TypeError("expected bytes, not %s"
-                            % altchars.__class__.__name__)
-        assert len(altchars) == 2, repr(altchars)
-        return encoded.translate(bytes.maketrans(b'+/', altchars))
-    return encoded
+def delete(url, **kw):
+    return request("DELETE", url, **kw)
