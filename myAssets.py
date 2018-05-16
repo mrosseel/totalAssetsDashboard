@@ -11,3 +11,7 @@ crypto_poloniex_amounts=[100,99]
 bitcoin = 2.3
 gold_ounces=krugerrand_troy_ounce*2
 silver_ounces=maple_leaf_tube_ounce*2
+
+timezone=2
+ssid='apollo'
+password='1Zw9hSJGH9kn'
