@@ -5,6 +5,7 @@ import connectWifi
 import machine, ssd1306
 import urequests
 import time
+import common
 
 import mikeAssets as myAssets
 
@@ -23,18 +24,6 @@ def printResult(name, value):
 def prettyResult(name, value):
     return '{}:\t\t{:>7} EUR'.format(name, '{:.0f}'.format(value))
 
-def prettyResultSmall(name, value, suffix=''):
-    label = '{}:'.format(name)
-    if(value > 100000):
-        numbervalue = '{:>n}K'.format(round(value/1000.0))
-    else:
-        numbervalue = '{:>,n}'.format(round(value))
-    spaces = 16 - len(label) - len(numbervalue) - len(suffix)
-    filler = ''
-    if spaces > 0:
-        filler = ' '*spaces
-    return label + filler + numbervalue + suffix
-
 def printPercentage(value, total):
     print('\t\t({:>4} %)'.format('{:.1f}'.format(value/total*100)))
 
@@ -51,11 +40,11 @@ def printAll(verbose=True):
     #printFullResult("other", other, total)
     #printResult('Total', total)
     oled.fill(0)
-    oledLine(prettyResultSmall('Stocks', stocks), 0)
-    oledLine(prettyResultSmall('Crypto', crypto), 1)
-    oledLine(prettyResultSmall('PM', pm), 2)
-    oledLine(prettyResultSmall('Other', other), 3)
-    oledLine(prettyResultSmall('Total', total, ' EUR'), 4)
+    oledLine(common.prettyResultSmall('Stocks', stocks), 0)
+    oledLine(common.prettyResultSmall('Crypto', crypto), 1)
+    oledLine(common.prettyResultSmall('PM', pm), 2)
+    oledLine(common.prettyResultSmall('Other', other), 3)
+    oledLine(common.prettyResultSmall('Total', total, ' EUR'), 4)
     timestring = current_prices_crypto['TIME'][:-3]
     hour = int(timestring[:2])
     correctedhour = hour + myAssets.timezone
