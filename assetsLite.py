@@ -4,7 +4,8 @@ import json
 import connectWifi
 import machine, ssd1306
 import urequests
-import time
+import utime as time
+import gc
 
 import mikeAssets as myAssets
 
@@ -26,7 +27,7 @@ def prettyResult(name, value):
 def prettyResultSmall(name, value, suffix=''):
     label = '{}:'.format(name)
     if(value > 100000):
-        numbervalue = '{:>n}K'.format(round(value/1000.0))
+        numbervalue = '{:>n}k'.format(round(value/1000.0))
     else:
         numbervalue = '{:>,n}'.format(round(value))
     spaces = 16 - len(label) - len(numbervalue) - len(suffix)
@@ -39,17 +40,18 @@ def printPercentage(value, total):
     print('\t\t({:>4} %)'.format('{:.1f}'.format(value/total*100)))
 
 def printAll(verbose=True):
+    gc.enable()
+    gc.collect()
+    print('Before Free mem', gc.mem_free())
     current_prices_crypto = urequests.get('http://total-assets.appspot.com').json()
     stocks = lib.getStocks(myAssets.stocks, myAssets.stocks_amounts)
     crypto = lib.getCryptoPolo(current_prices_crypto, myAssets.bitcoin, myAssets.crypto_poloniex, myAssets.crypto_poloniex_amounts)
     other = getOther(myAssets)
     pm = lib.getPM(current_prices_crypto['goldeur'], current_prices_crypto['silvereur'], myAssets.gold_ounces, myAssets.silver_ounces)
     total = stocks+crypto+pm+other
-    #printFullResult("stocks", stocks, total)
-    #printFullResult("crypto", crypto, total)
-    #printFullResult("pm", pm, total)
-    #printFullResult("other", other, total)
-    #printResult('Total', total)
+    print('After Free mem', gc.mem_free())
+    gc.collect()
+    print('After GC Free mem', gc.mem_free())
     oled.fill(0)
     oledLine(prettyResultSmall('Stocks', stocks), 0)
     oledLine(prettyResultSmall('Crypto', crypto), 1)
@@ -82,14 +84,22 @@ def run():
     initWifiAndOled()
     oledLineFull('Load prices...', 3)
     verbose = False
+    toggle = True
     while True:
         try:
             printAll(verbose)
-            time.sleep(60*10)
+            for x in range(0, 600):
+                oled.text('\\' if toggle else '/', 60, 50, 0)
+                oled.show()
+                oled.text('/' if toggle else '\\', 60, 50)
+                oled.show()
+                toggle = not toggle
+                time.sleep(1)
         except Exception as e:
             print('Exception occured:',type(e), e.args, e)
-            oledLineFull('Error, 10s sleep', 3)
-            time.sleep(60*10)
+            oledLineFull('Error, 1s sleep', 3)
+            print('error')
+
 
 if __name__ == '__main__':
     run()
